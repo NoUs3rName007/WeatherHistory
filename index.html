@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Turku Weather History</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>Turku Weather History</h1>
+        <p>Daily temperature history (2010–2025)</p>
+    </header>
+
+    <section class="controls">
+        <label for="daySelect">Select Day:</label>
+        <input type="date" id="daySelect">
+    </section>
+
+    <section class="chart-container">
+        <canvas id="weatherChart"></canvas>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
