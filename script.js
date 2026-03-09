@@ -151,13 +151,20 @@ function createMonthlyChart(data) {
             responsive: true,
             plugins: {
                 tooltip: {
+                    mode: 'index',
+                    intersect: false,
                     titleFont: {size: 14},
-                    bodyFont: {size: 13}
+                    bodyFont: {size: 13},
+                    padding: 10
                 },
                 title: {
                     display: true,
                     text: 'Monthly Average Temperature (2010-2025)'
                 }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
             },
             scales: {
                 y: {
