@@ -10,8 +10,7 @@
 <body>
 
     <header>
-        <h1>Turku Weather History</h1>
-        <p>Daily temperature history (2010–2025)</p>
+        <h1>Turku Weather History (1959-2026)</h1>
     </header>
 
     <section class="controls">
@@ -42,16 +41,28 @@
     </section>
 
     <section class="chart-container">
-        <canvas id="weatherChart"></canvas>
+        <h2>Daily Temperatures (2000–2026)</h2>
+        <canvas id="dailyRecentChart"></canvas>
     </section>
 
     <section class="chart-container">
+        <h2>Daily Temperatures (1959–1999)</h2>
+        <canvas id="dailyOlderChart"></canvas>
+    </section>
+
+    <section class="chart-container">
+        <h2>Monthly Average Temperatures</h2>
         <canvas id="monthlyChart"></canvas>
+    </section>
+
+    <section class="chart-container">
+        <h2>Yearly Average Temperatures (1959–2023)</h2>
+        <canvas id="yearlyChart"></canvas>
     </section>
 
     <script src="script.js"></script>
     <footer>
-        <p>Data source: Turku weather 2010–2025. Developed for demonstration purposes.</p>
+        <p>Source: <a href="https://en.ilmatieteenlaitos.fi/" target="_blank">Finnish Meteorological Institute</a></p>
     </footer>
 </body>
 </html>
