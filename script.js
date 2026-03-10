@@ -1,10 +1,12 @@
 let weatherData = [];
-let chart;
+let dailyRecentChart;
+let dailyOlderChart;
 let monthlyChart;
+let yearlyChart;
 
 async function loadCSV() {
     try {
-        const response = await fetch('data/turku_weather_2010_2025.csv');
+        const response = await fetch('data/turku_weather_1970_2026.csv');
         if (!response.ok) throw new Error('Failed to load CSV');
         const text = await response.text();
 
@@ -14,40 +16,173 @@ async function loadCSV() {
             .filter(row => row.trim() !== "")
             .map(row => {
                 const [
-                    date,
+                    station,
                     year,
                     month,
                     day,
+                    time,
                     avg_temp,
-                    min_temp,
-                    max_temp
-                ] = row.split('\t'); // <-- TAB separated
+                    max_temp,
+                    min_temp
+                ] = row.split(','); // <-- comma separated
+
+                const avg = parseFloat(avg_temp);
+                const min = parseFloat(min_temp);
+                const max = parseFloat(max_temp);
+
+                if (isNaN(avg) || isNaN(min) || isNaN(max)) {
+                    return null; // skip invalid rows
+                }
 
                 return {
-                    date: date,
                     year: parseInt(year),
                     month: parseInt(month),
                     day: parseInt(day),
-                    avg: parseFloat(avg_temp),
-                    min: parseFloat(min_temp),
-                    max: parseFloat(max_temp)
+                    avg: avg,
+                    min: min,
+                    max: max
                 };
-            });
+            })
+            .filter(d => d !== null);
 
         const monthlyData = computeMonthlyAverages();
         createMonthlyChart(monthlyData);
+
+        const yearlyData = computeYearlyAverages();
+        createYearlyChart(yearlyData);
     } catch (error) {
         console.error('Error loading CSV:', error);
         alert('Failed to load weather data.');
     }
 }
 
-function createChart(labels, avgData, minData, maxData) {
-    const ctx = document.getElementById('weatherChart').getContext('2d');
+function computeMonthlyAverages() {
+    const monthlyAvg = [];
+    for (let m = 1; m <= 12; m++) {
+        const monthData = weatherData.filter(d => d.month === m);
+        let avg = 0;
+        if (monthData.length > 0) {
+            avg = monthData.reduce((sum, d) => sum + d.avg, 0) / monthData.length;
+            // round down to two decimal places
+            avg = Math.floor(avg * 100) / 100;
+        }
+        monthlyAvg.push(avg);
+    }
+    return monthlyAvg;
+}
 
-    if (chart) chart.destroy();
+function computeYearlyAverages() {
+    const periods = [];
+    const averages = [];
+    for (let start = 1959; start <= 2019; start += 5) {
+        const end = start + 4;
+        const periodData = weatherData.filter(d => d.year >= start && d.year <= end);
+        let avg = 0;
+        if (periodData.length > 0) {
+            avg = periodData.reduce((sum, d) => sum + d.avg, 0) / periodData.length;
+            avg = Math.floor(avg * 100) / 100;
+        }
+        periods.push(`${start}-${end}`);
+        averages.push(avg);
+    }
+    return { periods: periods, averages: averages };
+}
 
-    chart = new Chart(ctx, {
+function createMonthlyChart(data) {
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+
+    if (monthlyChart) monthlyChart.destroy();
+
+    const monthColors = [
+        '#ff7f0e','#1f77b4','#2ca02c','#d62728','#9467bd','#8c564b',
+        '#e377c2','#7f7f7f','#bcbd22','#17becf','#aec7e8','#98df8a'
+    ];
+    monthlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [{
+                label: 'Average Temperature (°C)',
+                data: data,
+                backgroundColor: monthColors.map(c => c + '99'),
+                borderColor: monthColors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly Average Temperatures (1959–2026)'
+                }
+            },
+            scales: {
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Temperature (°C)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createYearlyChart(data) {
+    const ctx = document.getElementById('yearlyChart').getContext('2d');
+
+    if (yearlyChart) yearlyChart.destroy();
+
+    const monthColors = [
+        '#ff7f0e','#1f77b4','#2ca02c','#d62728','#9467bd','#8c564b',
+        '#e377c2','#7f7f7f','#bcbd22','#17becf','#aec7e8','#98df8a'
+    ];
+
+    yearlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.periods,
+            datasets: [{
+                label: 'Average Temperature (°C)',
+                data: data.averages,
+                backgroundColor: data.periods.map((_, index) => monthColors[index % monthColors.length] + '99'),
+                borderColor: data.periods.map((_, index) => monthColors[index % monthColors.length]),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Yearly Average Temperatures (1959–2023)'
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Period'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Temperature (°C)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createDailyRecentChart(labels, avgData, minData, maxData) {
+    const ctx = document.getElementById('dailyRecentChart').getContext('2d');
+
+    if (dailyRecentChart) dailyRecentChart.destroy();
+
+    dailyRecentChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -94,7 +229,7 @@ function createChart(labels, avgData, minData, maxData) {
                 },
                 title: {
                     display: true,
-                    text: 'Temperature History for Selected Day'
+                    text: 'Daily Temperature History (2000–2026)'
                 }
             },
             elements: {
@@ -114,38 +249,45 @@ function createChart(labels, avgData, minData, maxData) {
     });
 }
 
-function computeMonthlyAverages() {
-    const monthlyAvg = [];
-    for (let m = 1; m <= 12; m++) {
-        const monthData = weatherData.filter(d => d.month === m);
-        let avg = monthData.reduce((sum, d) => sum + d.avg, 0) / monthData.length;
-        // round down to two decimal places
-        avg = Math.floor(avg * 100) / 100;
-        monthlyAvg.push(avg);
-    }
-    return monthlyAvg;
-}
+function createDailyOlderChart(labels, avgData, minData, maxData) {
+    const ctx = document.getElementById('dailyOlderChart').getContext('2d');
 
-function createMonthlyChart(data) {
-    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    if (dailyOlderChart) dailyOlderChart.destroy();
 
-    if (monthlyChart) monthlyChart.destroy();
-
-    const monthColors = [
-        '#ff7f0e','#1f77b4','#2ca02c','#d62728','#9467bd','#8c564b',
-        '#e377c2','#7f7f7f','#bcbd22','#17becf','#aec7e8','#98df8a'
-    ];
-    monthlyChart = new Chart(ctx, {
-        type: 'bar',
+    dailyOlderChart = new Chart(ctx, {
+        type: 'line',
         data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            datasets: [{
-                label: 'Average Temperature (°C)',
-                data: data,
-                backgroundColor: monthColors.map(c => c + '99'),
-                borderColor: monthColors,
-                borderWidth: 1
-            }]
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Average Temp',
+                    data: avgData,
+                    borderColor: '#1f77b4',
+                    backgroundColor: 'rgba(31,119,180,0.2)',
+                    tension: 0.2,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    pointHitRadius: 10
+                },
+                {
+                    label: 'Min Temp',
+                    data: minData,
+                    borderColor: '#2ca02c',
+                    backgroundColor: 'rgba(44,160,44,0.2)',
+                    tension: 0.2,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                },
+                {
+                    label: 'Max Temp',
+                    data: maxData,
+                    borderColor: '#d62728',
+                    backgroundColor: 'rgba(214,39,40,0.2)',
+                    tension: 0.2,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                }
+            ]
         },
         options: {
             responsive: true,
@@ -159,16 +301,16 @@ function createMonthlyChart(data) {
                 },
                 title: {
                     display: true,
-                    text: 'Monthly Average Temperature (2010-2025)'
+                    text: 'Daily Temperature History (1959–1999)'
                 }
             },
-            interaction: {
-                mode: 'index',
-                intersect: false
+            elements: {
+                point: {
+                    radius: 5
+                }
             },
             scales: {
                 y: {
-                    beginAtZero: true,
                     title: {
                         display: true,
                         text: 'Temperature (°C)'
@@ -187,12 +329,21 @@ function filterBySelectedDay(month, day) {
     // sort by year just in case
     filtered.sort((a, b) => a.year - b.year);
 
-    const labels = filtered.map(d => d.year);
-    const avgData = filtered.map(d => d.avg);
-    const minData = filtered.map(d => d.min);
-    const maxData = filtered.map(d => d.max);
+    const recentFiltered = filtered.filter(d => d.year >= 2000 && d.year <= 2026);
+    const olderFiltered = filtered.filter(d => d.year >= 1959 && d.year <= 1999);
 
-    createChart(labels, avgData, minData, maxData);
+    const recentLabels = recentFiltered.map(d => d.year);
+    const recentAvgData = recentFiltered.map(d => d.avg);
+    const recentMinData = recentFiltered.map(d => d.min);
+    const recentMaxData = recentFiltered.map(d => d.max);
+
+    const olderLabels = olderFiltered.map(d => d.year);
+    const olderAvgData = olderFiltered.map(d => d.avg);
+    const olderMinData = olderFiltered.map(d => d.min);
+    const olderMaxData = olderFiltered.map(d => d.max);
+
+    createDailyRecentChart(recentLabels, recentAvgData, recentMinData, recentMaxData);
+    createDailyOlderChart(olderLabels, olderAvgData, olderMinData, olderMaxData);
 }
 
 // when month changes, build appropriate days list
