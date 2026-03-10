@@ -6,7 +6,7 @@ let yearlyChart;
 
 async function loadCSV() {
     try {
-        const response = await fetch('data/turku_weather_1970_2026.csv');
+        const response = await fetch('data/turku_weather_1959_2026.csv');
         if (!response.ok) throw new Error('Failed to load CSV');
         const text = await response.text();
 
